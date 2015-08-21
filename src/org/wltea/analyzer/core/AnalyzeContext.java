@@ -42,16 +42,15 @@ import org.wltea.analyzer.dic.Dictionary;
  */
 class AnalyzeContext {
 	/**默认缓冲区大小*/
-	private static final int BUFF_SIZE = 4096;
+	public static final int BUFF_SIZE = 4096;
 	/**缓冲区耗尽的临界值*/
-	private static final int BUFF_EXHAUST_CRITICAL = 100;	
+	private static final int BUFF_EXHAUST_CRITICAL = 2;	
 	
  
 	/**字符串读取缓冲*/
     private char[] segmentBuff;
     /**字符类型数组*/
     private int[] charTypes;
-    
     
     /**
      * 记录Reader内已分析的字串总长度
@@ -66,15 +65,16 @@ class AnalyzeContext {
      * 最近一次读入的,可处理的字串长度
      */
 	private int available;
-
 	
 	/**子分词器锁。该集合非空，说明有子分词器在占用segmentBuff*/
     private Set<String> buffLocker;
     
     /**原始分词结果集合，未经歧义处理*/
     private QuickSortSet orgLexemes;    
+    
     /**LexemePath位置索引表*/
     private Map<Integer , LexemePath> pathMap;    
+    
     /**最终分词结果集*/
     private LinkedList<Lexeme> results;
     
@@ -94,10 +94,10 @@ class AnalyzeContext {
     int getCursor(){
     	return this.cursor;
     }
-//    
-//    void setCursor(int cursor){
-//    	this.cursor = cursor;
-//    }
+    
+    void setCursor(int cursor){
+    	this.cursor = cursor;
+    }
     
     char[] getSegmentBuff(){
     	return this.segmentBuff;
@@ -123,21 +123,21 @@ class AnalyzeContext {
      */
     int fillBuffer(Reader reader) throws IOException{
     	int readCount = 0;
+    	int offset = 0;
     	if(this.buffOffset == 0){
     		//首次读取reader
     		readCount = reader.read(segmentBuff);
     	}else{
-    		int offset = this.available - this.cursor;
-    		if(offset > 0){
-    			//最近一次读取的>最近一次处理的，将未处理的字串拷贝到segmentBuff头部
+    		offset = this.available - this.cursor;
+    		if(offset > 0){//最近一次读取的>最近一次处理的（上次存在未处理的字符），将未处理的字串拷贝到segmentBuff头部
     			System.arraycopy(this.segmentBuff , this.cursor , this.segmentBuff , 0 , offset);
     			readCount = offset;
     		}
     		
     		//继续读取reader ，以onceReadIn - onceAnalyzed为起始位置，继续填充segmentBuff剩余的部分
-    		readCount += reader.read(this.segmentBuff , offset , BUFF_SIZE - offset);
+    		 int readerlen = reader.read(this.segmentBuff , offset , BUFF_SIZE - offset);
+    		 readCount += readerlen;
     	}
-    	
     	//记录最后一次从Reader中读入的可用字符长度
     	this.available = readCount;
     	//重置当前指针
@@ -204,6 +204,10 @@ class AnalyzeContext {
 	 */
 	boolean isBufferConsumed(){
 		return this.cursor == this.available - 1;
+	}
+	
+	boolean isSureEnd(){
+		return this.available == BUFF_SIZE;
 	}
 	
 	/**

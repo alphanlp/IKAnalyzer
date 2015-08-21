@@ -35,7 +35,7 @@ import java.util.List;
 import org.wltea.analyzer.cfg.Configuration;
 
 /**
- * 词典管理类,单子模式
+ * 词典管理类,单例模式
  */
 public class Dictionary {
 
@@ -201,7 +201,7 @@ public class Dictionary {
         }
         
 		try {
-			BufferedReader br = new BufferedReader(new InputStreamReader(is , "UTF-8"), 512);
+			BufferedReader br = new BufferedReader(new InputStreamReader(is, "UTF-8"), 512);
 			String theWord = null;
 			do {
 				theWord = br.readLine();

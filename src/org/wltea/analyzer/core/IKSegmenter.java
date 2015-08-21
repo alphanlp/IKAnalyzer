@@ -25,7 +25,10 @@ package org.wltea.analyzer.core;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.io.StringReader;
+import java.nio.CharBuffer;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 import org.wltea.analyzer.cfg.Configuration;
@@ -47,6 +50,8 @@ public final class IKSegmenter {
 	private List<ISegmenter> segmenters;
 	/**分词歧义裁决器*/
 	private IKArbitrator arbitrator;
+	
+	private LinkedList<String> sentences;
 	
 	/**
 	 * IK分词器构造函数
@@ -74,6 +79,7 @@ public final class IKSegmenter {
 		this.cfg = cfg;
 		this.init();
 	}
+
 	
 	/**
 	 * 初始化
@@ -87,6 +93,9 @@ public final class IKSegmenter {
 		this.segmenters = this.loadSegmenters();
 		//加载歧义裁决器
 		this.arbitrator = new IKArbitrator();
+		
+		this.sentences = toSentences(input);
+		this.input = new StringReader(sentences.poll());
 	}
 	
 	/**
@@ -99,7 +108,7 @@ public final class IKSegmenter {
 		segmenters.add(new LetterSegmenter()); 
 		//处理中文数量词的子分词器
 		segmenters.add(new CN_QuantifierSegmenter());
-		//处理中文词的子分词器
+//		处理中文词的子分词器
 		segmenters.add(new CJKSegmenter());
 		return segmenters;
 	}
@@ -111,7 +120,7 @@ public final class IKSegmenter {
 	 */
 	public synchronized Lexeme next()throws IOException{
 		Lexeme lexeme = null;
-		while((lexeme = context.getNextLexeme()) == null ){
+		while((lexeme = context.getNextLexeme()) == null){
 			/*
 			 * 从reader中读取数据，填充buffer。
 			 * 如果reader是分次读入buffer的，那么buffer要进行移位处理。
@@ -119,9 +128,14 @@ public final class IKSegmenter {
 			 */
 			int available = context.fillBuffer(this.input);
 			if(available <= 0){
-				//reader已经读完
+				//reader已经读完，表示分词完成
 				context.reset();
-				return null;
+				if(!sentences.isEmpty()){
+					this.input = new StringReader(sentences.poll());
+					continue;
+				}else{
+					return null;
+				}
 			}else{
 				//初始化指针
 				context.initCursor();
@@ -137,6 +151,10 @@ public final class IKSegmenter {
    				//向前移动指针
 				}while(context.moveCursor());
 				
+				for(ISegmenter segmenter : segmenters){
+    				segmenter.resetCursor(context);
+    			}
+
 				//重置子分词器，为下轮循环进行初始化
 				for(ISegmenter segmenter : segmenters){
 					segmenter.reset();
@@ -145,14 +163,15 @@ public final class IKSegmenter {
 			
 			//对分词进行歧义处理
 			this.arbitrator.process(context, this.cfg.useSmart());			
-			
+		
 			//将分词结果输出到结果集，并处理未切分的单个CJK字符
 			context.outputToResult();
 			
 			//记录本次分词的缓冲区位移
 			context.markBufferOffset();			
 		}
-		return lexeme;
+		return lexeme;	
+	
 	}
 
 	/**
@@ -166,4 +185,74 @@ public final class IKSegmenter {
 			segmenter.reset();
 		}
 	}
+	
+	public static LinkedList<String> toSentences(Reader reader){
+		StringBuffer sb = new StringBuffer();
+		try {
+			CharBuffer charbuffer = CharBuffer.allocate(1024);
+			while(reader.read(charbuffer) != -1){
+				charbuffer.flip();
+				sb.append(charbuffer.toString());
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		return toSentenceList(sb.toString().toCharArray());
+	}
+	
+	private static LinkedList<String> toSentenceList(char[] chars){
+		LinkedList<String> sentences = new LinkedList<String>();
+        if(chars.length <= AnalyzeContext.BUFF_SIZE){
+        	sentences.add(new String(chars));
+        	return sentences;
+        }
+        
+        int j = 0;
+        int k = AnalyzeContext.BUFF_SIZE;
+        for (int i = AnalyzeContext.BUFF_SIZE - 1; i < chars.length && i > -1; --i,--k){
+        	switch (chars[i]){
+                case '。':
+                case '，':
+                case ',':
+                	sentences.add(new String(chars,j,k));
+                	j = i + 1;
+                	i += AnalyzeContext.BUFF_SIZE;
+                	k = AnalyzeContext.BUFF_SIZE;
+                    break;
+                case ';':
+                case '；':
+                	sentences.add(new String(chars,j,k));
+                	j = i + 1;
+                	i += AnalyzeContext.BUFF_SIZE;
+                	k = AnalyzeContext.BUFF_SIZE;
+                    break;
+                case '!':
+                case '！':
+                	sentences.add(new String(chars,j,k));
+                	j = i + 1;
+                	i += AnalyzeContext.BUFF_SIZE;
+                	k = AnalyzeContext.BUFF_SIZE;
+                    break;
+                case '?':
+                case '？':
+                	sentences.add(new String(chars,j,k));
+                	j = i + 1;
+                	i += AnalyzeContext.BUFF_SIZE;
+                	k = AnalyzeContext.BUFF_SIZE;
+                    break;
+                case '\n':
+                case '\r':
+                	sentences.add(new String(chars,j,k));
+                	j = i + 1;
+                	i += AnalyzeContext.BUFF_SIZE;
+                	k = AnalyzeContext.BUFF_SIZE;
+                    break;
+            }
+        }
+        
+        sentences.add(new String(chars,j,chars.length - j));
+        return sentences;
+    }
+	
 }

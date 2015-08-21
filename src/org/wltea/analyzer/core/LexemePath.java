@@ -65,7 +65,6 @@ class LexemePath extends QuickSortSet implements Comparable<LexemePath>{
 			return true;
 		}else{
 			return false;
-			
 		}
 	}
 	
@@ -81,7 +80,6 @@ class LexemePath extends QuickSortSet implements Comparable<LexemePath>{
 			this.pathEnd = lexeme.getBegin() + lexeme.getLength();
 			this.payloadLength += lexeme.getLength();
 			return true;
-			
 		}else if(this.checkCross(lexeme)){
 			return false;
 		}else{
@@ -92,7 +90,6 @@ class LexemePath extends QuickSortSet implements Comparable<LexemePath>{
 			Lexeme tail = this.peekLast();
 			this.pathEnd = tail.getBegin() + tail.getLength();
 			return true;
-			
 		}
 	}
 	
@@ -192,6 +189,7 @@ class LexemePath extends QuickSortSet implements Comparable<LexemePath>{
 		return theCopy;
 	}
 
+	@Override
 	public int compareTo(LexemePath o) {
 		//比较有效文本长度
 		if(this.payloadLength > o.payloadLength){

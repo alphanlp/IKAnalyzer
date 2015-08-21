@@ -38,12 +38,13 @@ import org.wltea.analyzer.dic.Hit;
  */
 class CN_QuantifierSegmenter implements ISegmenter{
 	
-	//子分词器标签
+	/**子分词器标签*/
 	static final String SEGMENTER_NAME = "QUAN_SEGMENTER";
 	
-	//中文数词
+	/**中文数词*/
 	private static String Chn_Num = "一二两三四五六七八九十零壹贰叁肆伍陆柒捌玖拾百千万亿拾佰仟萬億兆卅廿";//Cnum
 	private static Set<Character> ChnNumberChars = new HashSet<Character>();
+	
 	static{
 		char[] ca = Chn_Num.toCharArray();
 		for(char nChar : ca){
@@ -51,19 +52,19 @@ class CN_QuantifierSegmenter implements ISegmenter{
 		}
 	}
 	
-	/*
+	/**
 	 * 词元的开始位置，
 	 * 同时作为子分词器状态标识
 	 * 当start > -1 时，标识当前的分词器正在处理字符
 	 */
 	private int nStart;
-	/*
+	/**
 	 * 记录词元结束位置
 	 * end记录的是在词元中最后一个出现的合理的数词结束
 	 */
 	private int nEnd;
 
-	//待处理的量词hit队列
+	/**待处理的量词hit队列*/
 	private List<Hit> countHits;
 	
 	
@@ -90,7 +91,6 @@ class CN_QuantifierSegmenter implements ISegmenter{
 			context.lockBuffer(SEGMENTER_NAME);
 		}
 	}
-	
 
 	/**
 	 * 重置子分词器状态
@@ -99,6 +99,14 @@ class CN_QuantifierSegmenter implements ISegmenter{
 		nStart = -1;
 		nEnd = -1;
 		countHits.clear();
+	}
+	
+	public void resetCursor(AnalyzeContext context){
+		if(context.isSureEnd()){
+			if(nStart != -1 && nEnd != -1){
+				context.setCursor(nStart);
+			}
+		}
 	}
 	
 	/**
@@ -128,12 +136,14 @@ class CN_QuantifierSegmenter implements ISegmenter{
 		
 		//缓冲区已经用完，还有尚未输出的数词
 		if(context.isBufferConsumed()){
-			if(nStart != -1 && nEnd != -1){
-				//输出数词
-				outputNumLexeme(context);
-				//重置头尾指针
-				nStart = -1;
-				nEnd = -1;
+			if(!context.isSureEnd()){
+				if(nStart != -1 && nEnd != -1){
+					//输出数词
+					outputNumLexeme(context);
+					//重置头尾指针
+					nStart = -1;
+					nEnd = -1;
+				}
 			}
 		}	
 	}
@@ -149,7 +159,6 @@ class CN_QuantifierSegmenter implements ISegmenter{
 		}
 		
 		if(CharacterUtil.CHAR_CHINESE == context.getCurrentCharType()){
-			
 			//优先处理countHits中的hit
 			if(!this.countHits.isEmpty()){
 				//处理词段队列
@@ -175,7 +184,7 @@ class CN_QuantifierSegmenter implements ISegmenter{
 			//*********************************
 			//对当前指针位置的字符进行单字匹配
 			Hit singleCharHit = Dictionary.getSingleton().matchInQuantifierDict(context.getSegmentBuff(), context.getCursor(), 1);
-			if(singleCharHit.isMatch()){//首字成量词词
+			if(singleCharHit.isMatch()){//首字成量词
 				//输出当前的词
 				Lexeme newLexeme = new Lexeme(context.getBufferOffset() , context.getCursor() , 1 , Lexeme.TYPE_COUNT);
 				context.addLexeme(newLexeme);
@@ -189,8 +198,6 @@ class CN_QuantifierSegmenter implements ISegmenter{
 				//前缀匹配则放入hit列表
 				this.countHits.add(singleCharHit);
 			}
-			
-			
 		}else{
 			//输入的不是中文字符
 			//清空未成形的量词

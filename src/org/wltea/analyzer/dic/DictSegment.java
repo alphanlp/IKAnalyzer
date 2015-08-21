@@ -35,7 +35,7 @@ import java.util.Map;
 class DictSegment implements Comparable<DictSegment>{
 	
 	//公用字典表，存储汉字
-	private static final Map<Character , Character> charMap = new HashMap<Character , Character>(16 , 0.95f);
+	private static final Map<Character, Character> charMap = new HashMap<Character , Character>(16 , 0.95f);
 	//数组大小上限
 	private static final int ARRAY_LENGTH_LIMIT = 3;
 
@@ -217,8 +217,7 @@ class DictSegment implements Comparable<DictSegment>{
 	 * @param create  =1如果没有找到，则创建新的segment ; =0如果没有找到，不创建，返回null
 	 * @return
 	 */
-	private DictSegment lookforSegment(Character keyChar ,  int create){
-		
+	private DictSegment lookforSegment(Character keyChar, int create){	
 		DictSegment ds = null;
 
 		if(this.storeSize <= ARRAY_LENGTH_LIMIT){

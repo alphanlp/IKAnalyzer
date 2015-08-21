@@ -36,9 +36,9 @@ import org.wltea.analyzer.dic.Hit;
  */
 class CJKSegmenter implements ISegmenter {
 	
-	//子分词器标签
+	/**分词器标签*/
 	static final String SEGMENTER_NAME = "CJK_SEGMENTER";
-	//待处理的分词hit队列
+	/**待处理的分词hit队列*/
 	private List<Hit> tmpHits;
 	
 	
@@ -46,13 +46,13 @@ class CJKSegmenter implements ISegmenter {
 		this.tmpHits = new LinkedList<Hit>();
 	}
 
-	/* (non-Javadoc)
+	/**
 	 * @see org.wltea.analyzer.core.ISegmenter#analyze(org.wltea.analyzer.core.AnalyzeContext)
 	 */
 	public void analyze(AnalyzeContext context) {
 		if(CharacterUtil.CHAR_USELESS != context.getCurrentCharType()){	
 			//优先处理tmpHits中的hit
-			if(!this.tmpHits.isEmpty()){
+			if(!this.tmpHits.isEmpty()){				
 				//处理词段队列
 				Hit[] tmpArray = this.tmpHits.toArray(new Hit[this.tmpHits.size()]);
 				for(Hit hit : tmpArray){
@@ -91,8 +91,7 @@ class CJKSegmenter implements ISegmenter {
 				this.tmpHits.add(singleCharHit);
 			}
 		}else{
-			//遇到CHAR_USELESS字符
-			//清空队列
+			//遇到CHAR_USELESS字符，不可能继续往后匹配成词，清空队列
 			this.tmpHits.clear();
 		}
 		
@@ -105,18 +104,20 @@ class CJKSegmenter implements ISegmenter {
 		//判断是否锁定缓冲区
 		if(this.tmpHits.size() == 0){
 			context.unlockBuffer(SEGMENTER_NAME);
-			
 		}else{
 			context.lockBuffer(SEGMENTER_NAME);
 		}
 	}
 
-	/* (non-Javadoc)
+	/**
 	 * @see org.wltea.analyzer.core.ISegmenter#reset()
 	 */
 	public void reset() {
 		//清空队列
 		this.tmpHits.clear();
+	}
+	
+	public void resetCursor(AnalyzeContext context){
 	}
 
 }

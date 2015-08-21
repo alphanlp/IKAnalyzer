@@ -41,18 +41,19 @@ class IKArbitrator {
 	 * @param orgLexemes
 	 * @param useSmart
 	 */
+	
 	void process(AnalyzeContext context , boolean useSmart){
 		QuickSortSet orgLexemes = context.getOrgLexemes();
-		Lexeme orgLexeme = orgLexemes.pollFirst();
+		Lexeme orgLexeme = orgLexemes.pollFirst();// 没有经过歧义处理
 		
 		LexemePath crossPath = new LexemePath();
 		while(orgLexeme != null){
+			//有歧义加入，没有歧义的情况下进行下面处理
 			if(!crossPath.addCrossLexeme(orgLexeme)){
-				//找到与crossPath不相交的下一个crossPath	
+				//找到与crossPath不相交的下一个crossPath
 				if(crossPath.size() == 1 || !useSmart){
-					//crossPath没有歧义 或者 不做歧义处理
-					//直接输出当前crossPath
-					context.addLexemePath(crossPath);
+					//crossPath没有歧义或者不做歧义处理，直接输出当前crossPath
+					context.addLexemePath(crossPath);//添加到pathMap中
 				}else{
 					//对当前的crossPath进行歧义处理
 					QuickSortSet.Cell headCell = crossPath.getHead();
@@ -65,13 +66,13 @@ class IKArbitrator {
 				crossPath = new LexemePath();
 				crossPath.addCrossLexeme(orgLexeme);
 			}
+			
 			orgLexeme = orgLexemes.pollFirst();
 		}
 		
 		//处理最后的path
 		if(crossPath.size() == 1 || !useSmart){
-			//crossPath没有歧义 或者 不做歧义处理
-			//直接输出当前crossPath
+			//crossPath没有歧义或者不做歧义处理，直接输出当前crossPath
 			context.addLexemePath(crossPath);
 		}else{
 			//对当前的crossPath进行歧义处理
@@ -83,7 +84,7 @@ class IKArbitrator {
 	}
 	
 	/**
-	 * 歧义识别
+	 * 歧义识别。比如“国家人民”。
 	 * @param lexemeCell 歧义路径链表头
 	 * @param fullTextLength 歧义路径文本长度
 	 * @param option 候选结果路径
@@ -101,15 +102,32 @@ class IKArbitrator {
 		//当前词元链并非最理想的，加入候选路径集合
 		pathOptions.add(option.copy());
 		
+//		QuickSortSet.Cell temp= option.getHead();
+//		while(temp != null){
+//			System.out.println(temp.getLexeme());
+//			temp = temp.getNext();
+//		}
+//		System.out.println();
+		
 		//存在歧义词，处理
 		QuickSortSet.Cell c = null;
 		while(!lexemeStack.isEmpty()){
-			c = lexemeStack.pop();
-			//回滚词元链
-			this.backPath(c.getLexeme() , option);
-			//从歧义词位置开始，递归，生成可选方案
-			this.forwardPath(c , option);
-			pathOptions.add(option.copy());
+			c = lexemeStack.pop();// 弹出一个链，比如“国家”
+			
+			//回滚词元链，直到没有歧义发生
+			this.backPath(c.getLexeme(), option);
+			
+			//从歧义词位置开始，递归，生成候选方案
+			this.forwardPath(c, option);
+			
+//			QuickSortSet.Cell temp1= option.getHead();
+//			while(temp1 != null){
+//				System.out.println(temp1.getLexeme());
+//				temp1 = temp1.getNext();
+//			}
+//			System.out.println();
+			
+			pathOptions.add(option.copy());// 国家/人/民
 		}
 		
 		//返回集合中的最优方案
@@ -117,7 +135,8 @@ class IKArbitrator {
 	}
 	
 	/**
-	 * 向前遍历，添加词元，构造一个无歧义词元组合
+	 * 向前遍历，添加词元，构造一个无歧义词元组合。
+	 * 比如“国家人民”，option对应的的LexemePath为"国家/人民"，返回的conflictStack中存储“国，家，家人，人,民”5个为头的链
 	 * @param LexemePath path
 	 * @return
 	 */
@@ -127,7 +146,7 @@ class IKArbitrator {
 		QuickSortSet.Cell c = lexemeCell;
 		//迭代遍历Lexeme链表
 		while(c != null && c.getLexeme() != null){
-			if(!option.addNotCrossLexeme(c.getLexeme())){
+			if(!option.addNotCrossLexeme(c.getLexeme())){// 当没有歧义加入，有交叉歧义时进行如下处理
 				//词元交叉，添加失败则加入lexemeStack栈
 				conflictStack.push(c);
 			}
@@ -145,7 +164,6 @@ class IKArbitrator {
 		while(option.checkCross(l)){
 			option.removeTail();
 		}
-		
 	}
 	
 }
